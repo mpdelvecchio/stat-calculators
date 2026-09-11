@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Statistical Distribution Calculators</title>
+<style>
+  :root{
+    --bg:#ffffff; --ink:#1a1a2e; --muted:#5c5c72; --line:#d9d9e3;
+    --accent:#3a5bd9; --accent-soft:#e8edfb; --shade:rgba(58,91,217,.28);
+    --curve:#2b2b40;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.55 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink);background:var(--bg);padding:24px}
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:1.4rem;margin:0 0 .2em}
+  p.sub{margin:0 0 1.2em;color:var(--muted)}
+
+  nav#pagenav{display:flex;flex-wrap:wrap;gap:.5em;margin-bottom:1.4em}
+  nav#pagenav button{flex:1;min-width:130px;border:1px solid var(--line);background:#fff;
+    border-radius:8px;padding:.65em .5em;cursor:pointer;font-size:.95rem;color:var(--ink)}
+  nav#pagenav button.active{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+
+  .page{display:none}
+  .page.active{display:block}
+
+  fieldset{border:1px solid var(--line);border-radius:10px;margin:0 0 1em;padding:.9em 1em}
+  legend{padding:0 .4em;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+  .seg{display:flex;flex-wrap:wrap;gap:.5em}
+  .seg label{flex:1;min-width:150px;border:1px solid var(--line);border-radius:8px;padding:.55em .7em;
+             cursor:pointer;text-align:center;position:relative}
+  .seg input{position:absolute;opacity:0;pointer-events:none}
+  .seg label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+  .row{display:flex;gap:1em;align-items:flex-end;flex-wrap:wrap}
+  .field{flex:1;min-width:180px}
+  label.lbl{display:block;font-size:.9rem;color:var(--muted);margin-bottom:.3em}
+  input[type=number]{width:100%;font-size:1.1rem;padding:.5em .6em;border:1px solid var(--line);border-radius:8px}
+  .presets{display:flex;gap:.4em;margin-top:.5em}
+  .presets button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:.3em .8em;cursor:pointer}
+  .presets button:hover{border-color:var(--accent);color:var(--accent)}
+  .fixed-note{background:var(--accent-soft);border-radius:8px;padding:.6em .9em;font-size:.9rem;margin-bottom:1em}
+  .result{background:var(--accent-soft);border-radius:10px;padding:1em 1.2em;margin:1em 0;min-height:3.4em}
+  .result .big{font-size:1.5rem;font-weight:700;margin-bottom:.2em}
+  .result .apa{font-family:ui-monospace,Menlo,Consolas,monospace;margin-top:.5em;color:var(--muted);font-size:.95rem}
+  .result .calc{color:var(--muted);font-style:italic}
+  canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:10px;margin-top:.5em}
+  .note{font-size:.9rem;color:var(--muted)}
+  .err{color:#b00020;font-size:.9rem;min-height:1.2em}
+  footer{margin-top:2em;font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:1em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Statistical Distribution Calculators</h1>
+  <p class="sub">Five calculators for the distributions used in intro/intermediate statistics: standard normal (Z), t, chi-square (&chi;&sup2;), F, and the studentized range (q, for Tukey&ndash;Kramer).</p>
+
+  <nav id="pagenav">
+    <button data-page="z">Z (Normal)</button>
+    <button data-page="t">t</button>
+    <button data-page="chi">&chi;&sup2; (Chi-Square)</button>
+    <button data-page="f">F (ANOVA)</button>
+    <button data-page="q">q (Tukey&ndash;Kramer)</button>
+  </nav>
+
+  <!-- ============ PAGE Z ============ -->
+  <section class="page" id="page-z">
+    <fieldset>
+      <legend>Mode</legend>
+      <div class="seg">
+        <label><input type="radio" name="z-mode" value="zcrit" checked><span>Z-Crit Lookup (input &alpha;)</span></label>
+        <label><input type="radio" name="z-mode" value="pvalue"><span>P-value Lookup (input Z)</span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Test type</legend>
+      <div class="seg">
+        <label><input type="radio" name="z-tail" value="two" checked><span>Two-tailed</span></label>
+        <label><input type="radio" name="z-tail" value="left"><span>One-tailed (left)</span></label>
+        <label><input type="radio" name="z-tail" value="right"><span>One-tailed (right)</span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Input</legend>
+      <div class="row">
+        <div class="field">
+          <label class="lbl" id="z-inLabel" for="z-val">Alpha (&alpha;), between 0 and 1</label>
+          <input type="number" id="z-val" step="0.001" value="0.05" min="0" max="1">
+          <div class="presets" id="z-presets">
+            <button type="button" data-v="0.10">&alpha; = .10</button>
+            <button type="button" data-v="0.05">&alpha; = .05</button>
+            <button type="button" data-v="0.01">&alpha; = .01</button>
+          </div>
+        </div>
+      </div>
+      <div class="err" id="z-err"></div>
+    </fieldset>
+    <div class="result" id="z-result"></div>
+    <canvas id="z-plot" height="300" aria-label="Standard normal curve"></canvas>
+    <p class="note" id="z-explain"></p>
+  </section>
+
+  <!-- ============ PAGE t ============ -->
+  <section class="page" id="page-t">
+    <fieldset>
+      <legend>Mode</legend>
+      <div class="seg">
+        <label><input type="radio" name="t-mode" value="crit" checked><span>Critical Value (input df, &alpha;)</span></label>
+        <label><input type="radio" name="t-mode" value="pvalue"><span>P-value (input df, t-statistic)</span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Test type</legend>
+      <div class="seg">
+        <label><input type="radio" name="t-tail" value="two" checked><span>Two-tailed</span></label>
+        <label><input type="radio" name="t-tail" value="left"><span>One-tailed (left)</span></label>
+        <label><input type="radio" name="t-tail" value="right"><span>One-tailed (right)</span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Input</legend>
+      <div class="row">
+        <div class="field">
+          <label class="lbl" for="t-df">Degrees of freedom (df)</label>
+          <input type="number" id="t-df" step="1" min="1" value="20">
+        </div>
+        <div class="field">
+          <label class="lbl" id="t-inLabel" for="t-val">Alpha (&alpha;), between 0 and 1</label>
+          <input type="number" id="t-val" step="0.001" value="0.05">
+          <div class="presets" id="t-presets">
+            <button type="button" data-v="0.10">&alpha; = .10</button>
+            <button type="button" data-v="0.05">&alpha; = .05</button>
+            <button type="button" data-v="0.01">&alpha; = .01</button>
+          </div>
+        </div>
+      </div>
+      <div class="err" id="t-err"></div>
+    </fieldset>
+    <div class="result" id="t-result"></div>
+    <canvas id="t-plot" height="300" aria-label="t distribution curve"></canvas>
+    <p class="note" id="t-explain"></p>
+  </section>
+
+  <!-- ============ PAGE CHI-SQUARE ============ -->
+  <section class="page" id="page-chi">
+    <div class="fixed-note">Chi-square tests are always right-tailed &mdash; the test statistic is a sum of squared deviations, so it can never be negative, and evidence against H&#8320; only ever shows up as an unusually <em>large</em> value.</div>
+    <fieldset>
+      <legend>Input</legend>
+      <div class="row">
+        <div class="field">
+          <label class="lbl" for="chi-df">Degrees of freedom (df)</label>
+          <input type="number" id="chi-df" step="1" min="1" value="10">
+        </div>
+        <div class="field">
+          <label class="lbl" for="chi-alpha">Alpha (&alpha;), between 0 and 1</label>
+          <input type="number" id="chi-alpha" step="0.001" value="0.05" min="0" max="1">
+          <div class="presets" id="chi-presets">
+            <button type="button" data-v="0.10">&alpha; = .10</button>
+            <button type="button" data-v="0.05">&alpha; = .05</button>
+            <button type="button" data-v="0.01">&alpha; = .01</button>
+          </div>
+        </div>
+      </div>
+      <div class="err" id="chi-err"></div>
+    </fieldset>
+    <div class="result" id="chi-result"></div>
+    <canvas id="chi-plot" height="300" aria-label="Chi-square distribution curve"></canvas>
+    <p class="note" id="chi-explain"></p>
+  </section>
+
+  <!-- ============ PAGE F ============ -->
+  <section class="page" id="page-f">
+    <div class="fixed-note">F is a ratio of two variances, so it's also bounded below by 0 &mdash; ANOVA's F-test is always right-tailed, testing whether between-group variability is unusually large relative to within-group variability.</div>
+    <fieldset>
+      <legend>Input</legend>
+      <div class="row">
+        <div class="field">
+          <label class="lbl" for="f-df1">df&#8321; &mdash; between groups (numerator)</label>
+          <input type="number" id="f-df1" step="1" min="1" value="3">
+        </div>
+        <div class="field">
+          <label class="lbl" for="f-df2">df&#8322; &mdash; within groups (denominator)</label>
+          <input type="number" id="f-df2" step="1" min="1" value="20">
+        </div>
+        <div class="field">
+          <label class="lbl" for="f-alpha">Alpha (&alpha;), between 0 and 1</label>
+          <input type="number" id="f-alpha" step="0.001" value="0.05" min="0" max="1">
+          <div class="presets" id="f-presets">
+            <button type="button" data-v="0.10">&alpha; = .10</button>
+            <button type="button" data-v="0.05">&alpha; = .05</button>
+            <button type="button" data-v="0.01">&alpha; = .01</button>
+          </div>
+        </div>
+      </div>
+      <div class="err" id="f-err"></div>
+    </fieldset>
+    <div class="result" id="f-result"></div>
+    <canvas id="f-plot" height="300" aria-label="F distribution curve"></canvas>
+    <p class="note" id="f-explain"></p>
+  </section>
+
+  <!-- ============ PAGE Q (TUKEY) ============ -->
+  <section class="page" id="page-q">
+    <div class="fixed-note">The studentized range distribution compares the largest gap among k sample means to the within-group variability. Like chi-square and F, it's only ever tested in the right tail. Its critical value takes a numerical integration to compute, so this page may take a moment to update.</div>
+    <fieldset>
+      <legend>Input</legend>
+      <div class="row">
+        <div class="field">
+          <label class="lbl" for="q-k">Number of groups (k)</label>
+          <input type="number" id="q-k" step="1" min="2" value="4">
+        </div>
+        <div class="field">
+          <label class="lbl" for="q-df">Error df</label>
+          <input type="number" id="q-df" step="1" min="1" value="20">
+        </div>
+        <div class="field">
+          <label class="lbl" for="q-alpha">Alpha (&alpha;), between 0 and 1</label>
+          <input type="number" id="q-alpha" step="0.001" value="0.05" min="0" max="1">
+          <div class="presets" id="q-presets">
+            <button type="button" data-v="0.10">&alpha; = .10</button>
+            <button type="button" data-v="0.05">&alpha; = .05</button>
+            <button type="button" data-v="0.01">&alpha; = .01</button>
+          </div>
+        </div>
+      </div>
+      <div class="err" id="q-err"></div>
+    </fieldset>
+    <div class="result" id="q-result"></div>
+    <canvas id="q-plot" height="300" aria-label="Studentized range distribution curve"></canvas>
+    <p class="note" id="q-explain"></p>
+  </section>
+
+  <footer>
+    Built for classroom use. Critical values and p-values are computed with standard numerical methods
+    (incomplete beta/gamma functions for t, chi-square and F; Gauss&ndash;Legendre quadrature over the
+    studentized-range double integral for q), verified against published critical-value tables.
+  </footer>
+</div>
+
+<script>
+/* =========================================================================
+   STATISTICS LIBRARY
+   ========================================================================= */
+function normPdf(x){ return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI); }
+function erf(x){
+  const s = x < 0 ? -1 : 1; x = Math.abs(x);
+  const t = 1/(1+0.3275911*x);
+  const y = 1 - (((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);
+  return s*y;
+}
+function normCdf(z){ return 0.5*(1+erf(z/Math.SQRT2)); }
+function normInv(p){
+  if (p <= 0) return -Infinity;
+  if (p >= 1) return Infinity;
+  const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];
+  const b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01];
+  const c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];
+  const d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  const pLow=0.02425, pHigh=1-pLow; let q,r,x;
+  if (p<pLow){ q=Math.sqrt(-2*Math.log(p));
+    x=(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  } else if (p<=pHigh){ q=p-0.5; r=q*q;
+    x=(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  } else { q=Math.sqrt(-2*Math.log(1-p));
+    x=-(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+  const e = normCdf(x) - p, u = e*Math.sqrt(2*Math.PI)*Math.exp(0.5*x*x);
+  return x - u/(1 + 0.5*x*u);
+}
+
+const LG_G = 7;
+const LG_C = [0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,
+  -176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+function logGamma(x){
+  if (x < 0.5) return Math.log(Math.PI/Math.sin(Math.PI*x)) - logGamma(1-x);
+  x -= 1; let a = LG_C[0]; const t = x + LG_G + 0.5;
+  for (let i = 1; i < LG_G + 2; i++) a += LG_C[i]/(x+i);
+  return 0.5*Math.log(2*Math.PI) + (x+0.5)*Math.log(t) - t + Math.log(a);
+}
+function logBeta(a,b){ return logGamma(a)+logGamma(b)-logGamma(a+b); }
+
+function gammaSeries(a, x){
+  let sum = 1/a, term = sum;
+  for (let n = 1; n < 500; n++){ term *= x/(a+n); sum += term; if (Math.abs(term) < Math.abs(sum)*1e-15) break; }
+  return sum * Math.exp(-x + a*Math.log(x) - logGamma(a));
+}
+function gammaCF(a, x){
+  const FPMIN = 1e-300;
+  let b = x + 1 - a, c = 1/FPMIN, d = 1/b, h = d;
+  for (let i = 1; i < 500; i++){
+    const an = -i*(i-a); b += 2;
+    d = an*d + b; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = b + an/c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1/d; const del = d*c; h *= del;
+    if (Math.abs(del-1) < 1e-15) break;
+  }
+  return Math.exp(-x + a*Math.log(x) - logGamma(a)) * h;
+}
+function lowerGammaP(a, x){ if (x <= 0) return 0; return x < a+1 ? gammaSeries(a,x) : 1-gammaCF(a,x); }
+function chiCdf(x, df){ return lowerGammaP(df/2, x/2); }
+function chiPdf(x, df){
+  if (x <= 0) return 0;
+  return Math.exp((df/2-1)*Math.log(x) - x/2 - (df/2)*Math.log(2) - logGamma(df/2));
+}
+
+function betaCF(x, a, b){
+  const FPMIN = 1e-300, MAXIT = 500, EPS = 1e-15;
+  const qab = a+b, qap = a+1, qam = a-1;
+  let c = 1, d = 1 - qab*x/qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN;
+  d = 1/d; let h = d;
+  for (let m = 1; m <= MAXIT; m++){
+    const m2 = 2*m;
+    let aa = m*(b-m)*x/((qam+m2)*(a+m2));
+    d = 1 + aa*d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa/c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1/d; h *= d*c;
+    aa = -(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d = 1 + aa*d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa/c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1/d; const del = d*c; h *= del;
+    if (Math.abs(del-1) < EPS) break;
+  }
+  return h;
+}
+function regIncBeta(x, a, b){
+  if (x <= 0) return 0; if (x >= 1) return 1;
+  const bt = Math.exp(logGamma(a+b)-logGamma(a)-logGamma(b) + a*Math.log(x) + b*Math.log(1-x));
+  return x < (a+1)/(a+b+2) ? bt*betaCF(x,a,b)/a : 1 - bt*betaCF(1-x,b,a)/b;
+}
+function tCdf(t, df){
+  const x = df/(df+t*t), ib = regIncBeta(x, df/2, 0.5);
+  return t >= 0 ? 1 - 0.5*ib : 0.5*ib;
+}
+function tPdf(t, df){
+  return Math.exp(logGamma((df+1)/2) - logGamma(df/2) - 0.5*Math.log(df*Math.PI)) * Math.pow(1+t*t/df, -(df+1)/2);
+}
+function fCdf(f, d1, d2){
+  if (f <= 0) return 0;
+  const x = d1*f/(d1*f+d2);
+  return regIncBeta(x, d1/2, d2/2);
+}
+function fPdf(x, d1, d2){
+  if (x <= 0) return 0;
+  return Math.exp(0.5*(d1*Math.log(d1)+d2*Math.log(d2)) + (d1/2-1)*Math.log(x) - (d1+d2)/2*Math.log(d2+d1*x) - logBeta(d1/2,d2/2));
+}
+
+function invertUpperTail(upperTail, p){
+  let hi = 1; while (upperTail(hi) > p) hi *= 2;
+  let lo = 0;
+  for (let i = 0; i < 100; i++){ const mid=(lo+hi)/2; if (upperTail(mid) > p) lo = mid; else hi = mid; }
+  return (lo+hi)/2;
+}
+function chiInv(alpha, df){ return invertUpperTail(x => 1 - chiCdf(x, df), alpha); }
+function fInv(alpha, d1, d2){ return invertUpperTail(f => 1 - fCdf(f, d1, d2), alpha); }
+function tInv(alphaOneTail, df){ return invertUpperTail(t => 1 - tCdf(t, df), alphaOneTail); }
+
+function gaussLegendre(n){
+  const nodes = new Array(n), weights = new Array(n);
+  const m = Math.floor((n+1)/2);
+  for (let i = 0; i < m; i++){
+    let z = Math.cos(Math.PI*(i+0.75)/(n+0.5)), z1, pp;
+    for (let iter = 0; iter < 100; iter++){
+      let p1 = 1, p2 = 0;
+      for (let j = 0; j < n; j++){ const p3=p2; p2=p1; p1=((2*j+1)*z*p2-j*p3)/(j+1); }
+      pp = n*(z*p1-p2)/(z*z-1); z1=z; z = z1 - p1/pp;
+      if (Math.abs(z-z1) < 1e-15) break;
+    }
+    nodes[i]=-z; nodes[n-1-i]=z; weights[i]=2/((1-z*z)*pp*pp); weights[n-1-i]=weights[i];
+  }
+  return {nodes, weights};
+}
+const GL48 = gaussLegendre(48);
+function integrate(f, a, b, gl){
+  const half=(b-a)/2, mid=(a+b)/2; let s=0;
+  for (let i=0;i<gl.nodes.length;i++) s += gl.weights[i]*f(mid+half*gl.nodes[i]);
+  return s*half;
+}
+function rangeCdf(w, k){
+  if (w <= 0) return 0;
+  return k * integrate(z => normPdf(z) * Math.pow(normCdf(z+w)-normCdf(z), k-1), -9, 9, GL48);
+}
+// Studentized range CDF: P(Q<=q) = integral over s (scaled chi density, df) of
+// [range CDF of k iid N(0,1), evaluated at q*s]. No closed form -- double numerical
+// integration, verified against published Tukey-HSD tables to within 0.05 (see project notes).
+function ptukey(q, k, df){
+  if (q <= 0) return 0;
+  if (df > 2000) return rangeCdf(q, k);
+  const sHi = Math.sqrt(chiInv(1e-12, df)/df) * 1.15;
+  return integrate(s => {
+    const dens = 2*Math.pow(df, df/2)*Math.pow(s, df-1)*Math.exp(-df*s*s/2) / (Math.pow(2, df/2)*Math.exp(logGamma(df/2)));
+    return dens * rangeCdf(q*s, k);
+  }, 0, sHi, GL48);
+}
+function qtukey(alpha, k, df){ return invertUpperTail(q => 1 - ptukey(q, k, df), alpha); }
+function qPdf(x, k, df){
+  const h = Math.max(1e-3, x*1e-3);
+  return (ptukey(x+h,k,df) - ptukey(Math.max(0,x-h),k,df)) / (h + Math.min(h,x));
+}
+
+/* =========================================================================
+   FORMATTING
+   ========================================================================= */
+function fmt(v, dp){ dp = dp==null?4:dp; if(!isFinite(v)) return v>0?'∞':'−∞'; return v.toFixed(dp); }
+function fmtP(p){ if (p < 1e-4) return p.toExponential(2); return p.toFixed(4); }
+
+/* =========================================================================
+   GENERIC CANVAS DRAWING
+   ========================================================================= */
+function niceStep(range, targetTicks){
+  const raw = range/targetTicks, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw/mag;
+  const step = norm<1.5?1:norm<3?2:norm<7?5:10;
+  return step*mag;
+}
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+function drawCurve(canvas, opts){
+  const { xMin, xMax, pdf, shades = [], critLines = [] } = opts;
+  const cssW = canvas.clientWidth || 860, cssH = 300;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = cssW*dpr; canvas.height = cssH*dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const padL=44, padR=20, padT=20, padB=34;
+  const plotW=cssW-padL-padR, plotH=cssH-padT-padB;
+
+  // Robust y-scale: some densities (chi-square/F with small df) diverge near x=0,
+  // so use a high percentile of sampled heights rather than the true max.
+  const N=300, samples=[];
+  for (let i=0;i<=N;i++){
+    const x = xMin + (xMax-xMin)*i/N;
+    let y = pdf(x);
+    if (!isFinite(y) || y<0) y = 0;
+    samples.push(y);
+  }
+  const sorted = samples.slice().sort((a,b)=>a-b);
+  let yMax = sorted[Math.floor(sorted.length*0.97)];
+  if (!isFinite(yMax) || yMax<=0) yMax = Math.max.apply(null, samples.filter(isFinite)) || 1;
+  yMax *= 1.18;
+
+  const sx = x => padL + (x-xMin)/(xMax-xMin)*plotW;
+  const sy = y => padT + (1 - Math.min(Math.max(y,0),yMax)/yMax)*plotH;
+
+  ctx.clearRect(0,0,cssW,cssH);
+
+  ctx.strokeStyle = css('--line'); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, sy(0)); ctx.lineTo(cssW-padR, sy(0)); ctx.stroke();
+  ctx.fillStyle = css('--muted'); ctx.font = '12px sans-serif'; ctx.textAlign='center';
+  const step = niceStep(xMax-xMin, 8);
+  for (let x = Math.ceil(xMin/step)*step; x <= xMax+1e-9; x += step){
+    ctx.beginPath(); ctx.moveTo(sx(x), sy(0)); ctx.lineTo(sx(x), sy(0)+4); ctx.stroke();
+    ctx.fillText(Math.abs(x)<1e-9?'0':x.toFixed(step<1?2:0), sx(x), sy(0)+18);
+  }
+
+  if (shades.length){
+    ctx.fillStyle = css('--shade');
+    shades.forEach(([lo,hi]) => {
+      lo = Math.max(lo, xMin); hi = Math.min(hi, xMax);
+      if (hi<=lo) return;
+      ctx.beginPath(); ctx.moveTo(sx(lo), sy(0));
+      for (let px=sx(lo); px<=sx(hi); px+=1){
+        const xv = xMin + (px-padL)/plotW*(xMax-xMin);
+        ctx.lineTo(px, sy(pdf(xv)));
+      }
+      ctx.lineTo(sx(hi), sy(0)); ctx.closePath(); ctx.fill();
+    });
+  }
+
+  ctx.strokeStyle = css('--curve'); ctx.lineWidth = 2; ctx.beginPath();
+  for (let px=padL; px<=cssW-padR; px+=1){
+    const xv = xMin + (px-padL)/plotW*(xMax-xMin);
+    const py = sy(pdf(xv));
+    px===padL ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+
+  if (critLines.length){
+    ctx.strokeStyle = css('--accent'); ctx.fillStyle = css('--accent');
+    ctx.setLineDash([5,4]); ctx.lineWidth = 1.5; ctx.textAlign='center'; ctx.font='bold 12px sans-serif';
+    critLines.forEach(({x,label}) => {
+      if (!isFinite(x) || x<xMin || x>xMax) return;
+      const py = sy(Math.min(pdf(x), yMax));
+      ctx.beginPath(); ctx.moveTo(sx(x), sy(0)); ctx.lineTo(sx(x), py-6); ctx.stroke();
+      ctx.fillText(label, sx(x), py-12);
+    });
+    ctx.setLineDash([]);
+  }
+}
+
+function renderResult(prefix, r){
+  const box = document.getElementById(prefix+'-result');
+  if (!r){ box.innerHTML = '<span class="note">Fix the input above to see results.</span>'; return; }
+  box.innerHTML = '<div class="big">'+r.big+'</div>' +
+    r.lines.map(l=>'<div>'+l+'</div>').join('') +
+    '<div class="apa">'+r.apa+'</div>';
+  document.getElementById(prefix+'-explain').textContent = r.explain || '';
+}
+function showErr(prefix, msg){ document.getElementById(prefix+'-err').textContent = msg || ''; }
+
+/* =========================================================================
+   PAGE Z
+   ========================================================================= */
+(function(){
+  const valInput = document.getElementById('z-val');
+  const zMode = () => document.querySelector('input[name=z-mode]:checked').value;
+  const zTail = () => document.querySelector('input[name=z-tail]:checked').value;
+
+  function syncLabel(){
+    if (zMode()==='zcrit'){
+      document.getElementById('z-inLabel').textContent = 'Alpha (α), between 0 and 1';
+      document.getElementById('z-presets').style.display = 'flex';
+      valInput.step = '0.001';
+      if (!(+valInput.value>0 && +valInput.value<1)) valInput.value = '0.05';
+    } else {
+      document.getElementById('z-inLabel').textContent = 'Z-statistic (any real number)';
+      document.getElementById('z-presets').style.display = 'none';
+      valInput.step = '0.01';
+      if (valInput.value === '') valInput.value = '1.96';
+    }
+  }
+
+  function compute(){
+    showErr('z','');
+    const mode = zMode(), tail = zTail(), v = parseFloat(valInput.value);
+    if (Number.isNaN(v)){ showErr('z','Enter a number.'); return null; }
+    if (mode==='zcrit'){
+      if (v<=0 || v>=1){ showErr('z','α must be between 0 and 1.'); return null; }
+      if (tail==='two'){
+        const zc = normInv(1-v/2);
+        return {big:'z = ±'+fmt(zc), lines:['Critical values: z = ±'+fmt(zc),'Reject H₀ if the test statistic is below −'+fmt(zc)+' or above '+fmt(zc)+'.'],
+          apa:'two-tailed, α = '+v+'  →  z_crit = ±'+fmt(zc,3), shade:{type:'two',z:zc},
+          explain:'Each tail holds α/2 = '+fmt(v/2)+'. The middle '+fmt(1-v)+' is the fail-to-reject region.'};
+      }
+      if (tail==='right'){
+        const zc = normInv(1-v);
+        return {big:'z = '+fmt(zc), lines:['Critical value: z = '+fmt(zc),'Reject H₀ if the test statistic exceeds '+fmt(zc)+'.'],
+          apa:'right-tailed, α = '+v+'  →  z_crit = '+fmt(zc,3), shade:{type:'right',z:zc},
+          explain:'The upper tail beyond z = '+fmt(zc)+' holds area α = '+fmt(v)+'.'};
+      }
+      const zc = normInv(v);
+      return {big:'z = '+fmt(zc), lines:['Critical value: z = '+fmt(zc),'Reject H₀ if the test statistic is below '+fmt(zc)+'.'],
+        apa:'left-tailed, α = '+v+'  →  z_crit = '+fmt(zc,3), shade:{type:'left',z:zc},
+        explain:'The lower tail below z = '+fmt(zc)+' holds area α = '+fmt(v)+'.'};
+    }
+    const z = v;
+    if (tail==='two'){
+      const p = 2*(1-normCdf(Math.abs(z)));
+      return {big:'p = '+fmtP(p), lines:['Two-tailed p-value: '+fmtP(p),'Area in each tail: '+fmtP(p/2)],
+        apa:'z = '+fmt(z,3)+', two-tailed  →  p = '+fmtP(p), shade:{type:'two',z:Math.abs(z)},
+        explain:'p = 2 × P(Z > |'+fmt(z,3)+'|). Φ('+fmt(z,3)+') = '+fmt(normCdf(z),4)+'.'};
+    }
+    if (tail==='right'){
+      const p = 1-normCdf(z);
+      return {big:'p = '+fmtP(p), lines:['Right-tailed p-value: '+fmtP(p),'Area to the left, Φ(z): '+fmt(normCdf(z),4)],
+        apa:'z = '+fmt(z,3)+', right-tailed  →  p = '+fmtP(p), shade:{type:'right',z:z},
+        explain:'p = P(Z ≥ '+fmt(z,3)+') = 1 − Φ('+fmt(z,3)+').'};
+    }
+    const p = normCdf(z);
+    return {big:'p = '+fmtP(p), lines:['Left-tailed p-value: '+fmtP(p),'Area to the right: '+fmt(1-p,4)],
+      apa:'z = '+fmt(z,3)+', left-tailed  →  p = '+fmtP(p), shade:{type:'left',z:z},
+      explain:'p = P(Z ≤ '+fmt(z,3)+') = Φ('+fmt(z,3)+').'};
+  }
+
+  function shadeToDraw(shade, xMin, xMax, sym){
+    if (!shade) return {shades:[], critLines:[]};
+    if (shade.type==='two'){
+      const az = Math.abs(shade.z);
+      return {shades:[[xMin,-az],[az,xMax]], critLines:[{x:-az,label:sym+' = −'+az.toFixed(3)},{x:az,label:sym+' = '+az.toFixed(3)}]};
+    }
+    if (shade.type==='right') return {shades:[[shade.z,xMax]], critLines:[{x:shade.z,label:sym+' = '+shade.z.toFixed(3)}]};
+    return {shades:[[xMin,shade.z]], critLines:[{x:shade.z,label:sym+' = '+shade.z.toFixed(3)}]};
+  }
+
+  window.renderZ = function(){
+    const r = compute();
+    renderResult('z', r);
+    const canvas = document.getElementById('z-plot');
+    const d = shadeToDraw(r && r.shade, -4, 4, 'z');
+    drawCurve(canvas, {xMin:-4, xMax:4, pdf: normPdf, shades:d.shades, critLines:d.critLines});
+  };
+
+  document.querySelectorAll('input[name=z-mode]').forEach(x=>x.addEventListener('change',()=>{syncLabel();renderZ();}));
+  document.querySelectorAll('input[name=z-tail]').forEach(x=>x.addEventListener('change',renderZ));
+  valInput.addEventListener('input', renderZ);
+  document.getElementById('z-presets').addEventListener('click', e=>{
+    if (e.target.tagName==='BUTTON'){ valInput.value = e.target.dataset.v; renderZ(); }
+  });
+  syncLabel();
+})();
+
+/* =========================================================================
+   PAGE t
+   ========================================================================= */
+(function(){
+  const dfInput = document.getElementById('t-df');
+  const valInput = document.getElementById('t-val');
+  const tMode = () => document.querySelector('input[name=t-mode]:checked').value;
+  const tTail = () => document.querySelector('input[name=t-tail]:checked').value;
+
+  function syncLabel(){
+    if (tMode()==='crit'){
+      document.getElementById('t-inLabel').textContent = 'Alpha (α), between 0 and 1';
+      document.getElementById('t-presets').style.display = 'flex';
+      valInput.step = '0.001';
+      if (!(+valInput.value>0 && +valInput.value<1)) valInput.value = '0.05';
+    } else {
+      document.getElementById('t-inLabel').textContent = 't-statistic (any real number)';
+      document.getElementById('t-presets').style.display = 'none';
+      valInput.step = '0.01';
+      if (valInput.value === '') valInput.value = '2.00';
+    }
+  }
+
+  function compute(){
+    showErr('t','');
+    const df = parseFloat(dfInput.value);
+    if (!(df>0)){ showErr('t','Degrees of freedom must be a positive number.'); return null; }
+    const mode = tMode(), tail = tTail(), v = parseFloat(valInput.value);
+    if (Number.isNaN(v)){ showErr('t','Enter a number.'); return null; }
+    if (mode==='crit'){
+      if (v<=0 || v>=1){ showErr('t','α must be between 0 and 1.'); return null; }
+      if (tail==='two'){
+        const tc = tInv(v/2, df);
+        return {big:'t = ±'+fmt(tc), lines:['Critical values: t('+df+') = ±'+fmt(tc),'Reject H₀ if |t| exceeds '+fmt(tc)+'.'],
+          apa:'df = '+df+', two-tailed, α = '+v+'  →  t_crit = ±'+fmt(tc,3), shade:{type:'two',z:tc},
+          explain:'Each tail holds α/2 = '+fmt(v/2)+'.'};
+      }
+      if (tail==='right'){
+        const tc = tInv(v, df);
+        return {big:'t = '+fmt(tc), lines:['Critical value: t('+df+') = '+fmt(tc),'Reject H₀ if t exceeds '+fmt(tc)+'.'],
+          apa:'df = '+df+', right-tailed, α = '+v+'  →  t_crit = '+fmt(tc,3), shade:{type:'right',z:tc},
+          explain:'The upper tail beyond t = '+fmt(tc)+' holds area α = '+fmt(v)+'.'};
+      }
+      const tc = -tInv(v, df);
+      return {big:'t = '+fmt(tc), lines:['Critical value: t('+df+') = '+fmt(tc),'Reject H₀ if t is below '+fmt(tc)+'.'],
+        apa:'df = '+df+', left-tailed, α = '+v+'  →  t_crit = '+fmt(tc,3), shade:{type:'left',z:tc},
+        explain:'The lower tail below t = '+fmt(tc)+' holds area α = '+fmt(v)+'.'};
+    }
+    const t = v;
+    if (tail==='two'){
+      const p = 2*(1-tCdf(Math.abs(t),df));
+      return {big:'p = '+fmtP(p), lines:['Two-tailed p-value: '+fmtP(p),'Area in each tail: '+fmtP(p/2)],
+        apa:'df = '+df+', t = '+fmt(t,3)+', two-tailed  →  p = '+fmtP(p), shade:{type:'two',z:Math.abs(t)},
+        explain:'p = 2 × P(T > |'+fmt(t,3)+'|) with '+df+' df.'};
+    }
+    if (tail==='right'){
+      const p = 1-tCdf(t,df);
+      return {big:'p = '+fmtP(p), lines:['Right-tailed p-value: '+fmtP(p)],
+        apa:'df = '+df+', t = '+fmt(t,3)+', right-tailed  →  p = '+fmtP(p), shade:{type:'right',z:t},
+        explain:'p = P(T ≥ '+fmt(t,3)+') with '+df+' df.'};
+    }
+    const p = tCdf(t,df);
+    return {big:'p = '+fmtP(p), lines:['Left-tailed p-value: '+fmtP(p)],
+      apa:'df = '+df+', t = '+fmt(t,3)+', left-tailed  →  p = '+fmtP(p), shade:{type:'left',z:t},
+      explain:'p = P(T ≤ '+fmt(t,3)+') with '+df+' df.'};
+  }
+
+  window.renderT = function(){
+    const r = compute();
+    renderResult('t', r);
+    const canvas = document.getElementById('t-plot');
+    if (!r){ drawCurve(canvas, {xMin:-4,xMax:4,pdf:x=>tPdf(x,20)}); return; }
+    const df = parseFloat(dfInput.value);
+    const key = r.shade.type==='two' ? Math.abs(r.shade.z) : Math.abs(r.shade.z);
+    const b = Math.max(4.5, key*1.35);
+    const shade = r.shade;
+    let shades, critLines;
+    if (shade.type==='two'){ const az=Math.abs(shade.z); shades=[[-b,-az],[az,b]]; critLines=[{x:-az,label:'t = −'+az.toFixed(3)},{x:az,label:'t = '+az.toFixed(3)}]; }
+    else if (shade.type==='right'){ shades=[[shade.z,b]]; critLines=[{x:shade.z,label:'t = '+shade.z.toFixed(3)}]; }
+    else { shades=[[-b,shade.z]]; critLines=[{x:shade.z,label:'t = '+shade.z.toFixed(3)}]; }
+    drawCurve(canvas, {xMin:-b, xMax:b, pdf:x=>tPdf(x,df), shades, critLines});
+  };
+
+  document.querySelectorAll('input[name=t-mode]').forEach(x=>x.addEventListener('change',()=>{syncLabel();renderT();}));
+  document.querySelectorAll('input[name=t-tail]').forEach(x=>x.addEventListener('change',renderT));
+  dfInput.addEventListener('input', renderT);
+  valInput.addEventListener('input', renderT);
+  document.getElementById('t-presets').addEventListener('click', e=>{
+    if (e.target.tagName==='BUTTON'){ valInput.value = e.target.dataset.v; renderT(); }
+  });
+  syncLabel();
+})();
+
+/* =========================================================================
+   PAGE CHI-SQUARE
+   ========================================================================= */
+(function(){
+  const dfInput = document.getElementById('chi-df');
+  const alphaInput = document.getElementById('chi-alpha');
+
+  function compute(){
+    showErr('chi','');
+    const df = parseFloat(dfInput.value), alpha = parseFloat(alphaInput.value);
+    if (!(df>0)){ showErr('chi','Degrees of freedom must be a positive number.'); return null; }
+    if (!(alpha>0 && alpha<1)){ showErr('chi','α must be between 0 and 1.'); return null; }
+    const crit = chiInv(alpha, df);
+    return {big:'χ² = '+fmt(crit), lines:['Critical value: χ²('+df+') = '+fmt(crit),'Reject H₀ if the test statistic exceeds '+fmt(crit)+'.'],
+      apa:'df = '+df+', α = '+alpha+' (right-tailed)  →  χ²_crit = '+fmt(crit,3),
+      crit, df,
+      explain:'The right tail beyond χ² = '+fmt(crit)+' holds area α = '+fmt(alpha)+'.'};
+  }
+
+  window.renderChi = function(){
+    const r = compute();
+    renderResult('chi', r);
+    const canvas = document.getElementById('chi-plot');
+    if (!r){ drawCurve(canvas, {xMin:0,xMax:20,pdf:x=>chiPdf(x,10)}); return; }
+    const xMax = Math.max(chiInv(0.0005, r.df), r.crit) * 1.25;
+    drawCurve(canvas, {xMin:0, xMax, pdf:x=>chiPdf(x,r.df),
+      shades:[[r.crit,xMax]], critLines:[{x:r.crit,label:'χ² = '+r.crit.toFixed(3)}]});
+  };
+
+  dfInput.addEventListener('input', renderChi);
+  alphaInput.addEventListener('input', renderChi);
+  document.getElementById('chi-presets').addEventListener('click', e=>{
+    if (e.target.tagName==='BUTTON'){ alphaInput.value = e.target.dataset.v; renderChi(); }
+  });
+})();
+
+/* =========================================================================
+   PAGE F
+   ========================================================================= */
+(function(){
+  const df1Input = document.getElementById('f-df1');
+  const df2Input = document.getElementById('f-df2');
+  const alphaInput = document.getElementById('f-alpha');
+
+  function compute(){
+    showErr('f','');
+    const d1 = parseFloat(df1Input.value), d2 = parseFloat(df2Input.value), alpha = parseFloat(alphaInput.value);
+    if (!(d1>0) || !(d2>0)){ showErr('f','Both degrees of freedom must be positive numbers.'); return null; }
+    if (!(alpha>0 && alpha<1)){ showErr('f','α must be between 0 and 1.'); return null; }
+    const crit = fInv(alpha, d1, d2);
+    return {big:'F = '+fmt(crit), lines:['Critical value: F('+d1+', '+d2+') = '+fmt(crit),'Reject H₀ if the F-statistic exceeds '+fmt(crit)+'.'],
+      apa:'df1 = '+d1+', df2 = '+d2+', α = '+alpha+' (right-tailed)  →  F_crit = '+fmt(crit,3),
+      crit, d1, d2,
+      explain:'The right tail beyond F = '+fmt(crit)+' holds area α = '+fmt(alpha)+'.'};
+  }
+
+  window.renderF = function(){
+    const r = compute();
+    renderResult('f', r);
+    const canvas = document.getElementById('f-plot');
+    if (!r){ drawCurve(canvas, {xMin:0,xMax:6,pdf:x=>fPdf(x,3,20)}); return; }
+    const xMax = Math.max(fInv(0.0005, r.d1, r.d2), r.crit) * 1.25;
+    drawCurve(canvas, {xMin:0, xMax, pdf:x=>fPdf(x,r.d1,r.d2),
+      shades:[[r.crit,xMax]], critLines:[{x:r.crit,label:'F = '+r.crit.toFixed(3)}]});
+  };
+
+  [df1Input, df2Input, alphaInput].forEach(el=>el.addEventListener('input', renderF));
+  document.getElementById('f-presets').addEventListener('click', e=>{
+    if (e.target.tagName==='BUTTON'){ alphaInput.value = e.target.dataset.v; renderF(); }
+  });
+})();
+
+/* =========================================================================
+   PAGE q (TUKEY-KRAMER)
+   ========================================================================= */
+(function(){
+  const kInput = document.getElementById('q-k');
+  const dfInput = document.getElementById('q-df');
+  const alphaInput = document.getElementById('q-alpha');
+  let debounceTimer = null;
+
+  function computeAndDraw(){
+    showErr('q','');
+    const k = Math.round(parseFloat(kInput.value)), df = parseFloat(dfInput.value), alpha = parseFloat(alphaInput.value);
+    if (!(k>=2)){ showErr('q','Number of groups must be an integer of 2 or more.'); renderResult('q', null); return; }
+    if (!(df>0)){ showErr('q','Error df must be a positive number.'); renderResult('q', null); return; }
+    if (!(alpha>0 && alpha<1)){ showErr('q','α must be between 0 and 1.'); renderResult('q', null); return; }
+
+    const box = document.getElementById('q-result');
+    box.innerHTML = '<span class="calc">Calculating…</span>';
+
+    setTimeout(() => {
+      const crit = qtukey(alpha, k, df);
+      const r = {big:'q = '+fmt(crit), lines:['Critical value: q('+k+', '+df+') = '+fmt(crit),
+          'For Tukey–Kramer HSD, reject H₀ for a pair if the studentized statistic exceeds '+fmt(crit)+'.'],
+        apa:'k = '+k+', df = '+df+', α = '+alpha+' (right-tailed)  →  q_crit = '+fmt(crit,3),
+        explain:'The right tail beyond q = '+fmt(crit)+' holds area α = '+fmt(alpha)+'.'};
+      renderResult('q', r);
+      const canvas = document.getElementById('q-plot');
+      const xMax = Math.max(crit*1.6, 2);
+      drawCurve(canvas, {xMin:0, xMax, pdf:x=>qPdf(x,k,df),
+        shades:[[crit,xMax]], critLines:[{x:crit,label:'q = '+crit.toFixed(3)}]});
+    }, 10);
+  }
+
+  window.renderQ = function(){
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(computeAndDraw, 250);
+  };
+  window.renderQNow = computeAndDraw;
+
+  [kInput, dfInput, alphaInput].forEach(el=>el.addEventListener('input', renderQ));
+  document.getElementById('q-presets').addEventListener('click', e=>{
+    if (e.target.tagName==='BUTTON'){ alphaInput.value = e.target.dataset.v; renderQ(); }
+  });
+})();
+
+/* =========================================================================
+   NAVIGATION
+   ========================================================================= */
+const PAGES = ['z','t','chi','f','q'];
+const RENDERERS = { z:()=>renderZ(), t:()=>renderT(), chi:()=>renderChi(), f:()=>renderF(), q:()=>renderQNow() };
+
+function showPage(id){
+  if (PAGES.indexOf(id) === -1) id = 'z';
+  PAGES.forEach(p => document.getElementById('page-'+p).classList.toggle('active', p===id));
+  document.querySelectorAll('#pagenav button').forEach(b => b.classList.toggle('active', b.dataset.page===id));
+  if (location.hash !== '#'+id) location.hash = id;
+  RENDERERS[id]();
+}
+window.addEventListener('hashchange', () => showPage((location.hash||'#z').slice(1)));
+document.querySelectorAll('#pagenav button').forEach(b => b.addEventListener('click', () => showPage(b.dataset.page)));
+window.addEventListener('resize', () => showPage((location.hash||'#z').slice(1)));
+
+showPage((location.hash||'#z').slice(1));
+</script>
+</body>
+</html>
