@@ -10,8 +10,7 @@ Five interactive calculators for intro/intermediate statistics, built as one pag
 
 Each page shades the relevant region on a live plot of the distribution and shows an APA-style summary line.
 
-**Live demo:** https://USERNAME.github.io/stat-calculators/
-*(replace `USERNAME` after enabling GitHub Pages)*
+**Live demo:** https://mpdelvecchio.github.io/stat-calculators/
 
 ## Using it in class
 
@@ -23,15 +22,6 @@ No build step, no dependencies. Either:
 
 - Double-click `index.html` to open it in a browser, or
 - Serve the folder with any static file server (e.g. `python3 -m http.server`) and open the shown address.
-
-## Deploying (free) with GitHub Pages
-
-1. Push this folder to a **public** GitHub repository named `stat-calculators`.
-2. In the repository, go to **Settings -> Pages**.
-3. Under **Build and deployment**, set **Source** to *Deploy from a branch*.
-4. Set the branch to `main` and the folder to `/ (root)`. Click **Save**.
-5. Wait about a minute, refresh, and copy the published URL
-   (`https://USERNAME.github.io/stat-calculators/`). Update the link above.
 
 ## How the math works
 
