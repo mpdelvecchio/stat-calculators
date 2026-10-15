@@ -47,6 +47,7 @@
   canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:10px;margin-top:.5em}
   .note{font-size:.9rem;color:var(--muted)}
   .err{color:#b00020;font-size:.9rem;min-height:1.2em}
+  [hidden]{display:none!important}
   footer{margin-top:2em;font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:1em}
 </style>
 </head>
@@ -65,7 +66,7 @@
 
   <!-- ============ PAGE Z ============ -->
   <section class="page" id="page-z">
-    <fieldset>
+    <fieldset id="z-modeBox">
       <legend>Mode</legend>
       <div class="seg">
         <label><input type="radio" name="z-mode" value="zcrit" checked><span>Z-Crit Lookup (input &alpha;)</span></label>
@@ -78,12 +79,15 @@
         <label><input type="radio" name="z-tail" value="two" checked><span>Two-tailed</span></label>
         <label><input type="radio" name="z-tail" value="left"><span>One-tailed (left)</span></label>
         <label><input type="radio" name="z-tail" value="right"><span>One-tailed (right)</span></label>
+        <label><input type="radio" name="z-tail" value="between"><span>Between</span></label>
+        <label><input type="radio" name="z-tail" value="outside"><span>Outside</span></label>
       </div>
     </fieldset>
     <fieldset>
       <legend>Input</legend>
+      <p class="note" id="z-rangeNote" hidden>Enter two Z values to find the probability that Z falls between them (Between) or beyond them on either side (Outside).</p>
       <div class="row">
-        <div class="field">
+        <div class="field" id="z-valField">
           <label class="lbl" id="z-inLabel" for="z-val">Alpha (&alpha;), between 0 and 1</label>
           <input type="number" id="z-val" step="0.001" value="0.05" min="0" max="1">
           <div class="presets" id="z-presets">
@@ -91,6 +95,14 @@
             <button type="button" data-v="0.05">&alpha; = .05</button>
             <button type="button" data-v="0.01">&alpha; = .01</button>
           </div>
+        </div>
+        <div class="field" id="z-loField" hidden>
+          <label class="lbl" for="z-lo">Lower Z value (a)</label>
+          <input type="number" id="z-lo" step="0.01" value="-1.96">
+        </div>
+        <div class="field" id="z-hiField" hidden>
+          <label class="lbl" for="z-hi">Upper Z value (b)</label>
+          <input type="number" id="z-hi" step="0.01" value="1.96">
         </div>
       </div>
       <div class="err" id="z-err"></div>
@@ -102,7 +114,7 @@
 
   <!-- ============ PAGE t ============ -->
   <section class="page" id="page-t">
-    <fieldset>
+    <fieldset id="t-modeBox">
       <legend>Mode</legend>
       <div class="seg">
         <label><input type="radio" name="t-mode" value="crit" checked><span>Critical Value (input df, &alpha;)</span></label>
@@ -115,16 +127,19 @@
         <label><input type="radio" name="t-tail" value="two" checked><span>Two-tailed</span></label>
         <label><input type="radio" name="t-tail" value="left"><span>One-tailed (left)</span></label>
         <label><input type="radio" name="t-tail" value="right"><span>One-tailed (right)</span></label>
+        <label><input type="radio" name="t-tail" value="between"><span>Between</span></label>
+        <label><input type="radio" name="t-tail" value="outside"><span>Outside</span></label>
       </div>
     </fieldset>
     <fieldset>
       <legend>Input</legend>
+      <p class="note" id="t-rangeNote" hidden>Enter df and two t values to find the probability that t falls between them (Between) or beyond them on either side (Outside).</p>
       <div class="row">
         <div class="field">
           <label class="lbl" for="t-df">Degrees of freedom (df)</label>
           <input type="number" id="t-df" step="1" min="1" value="20">
         </div>
-        <div class="field">
+        <div class="field" id="t-valField">
           <label class="lbl" id="t-inLabel" for="t-val">Alpha (&alpha;), between 0 and 1</label>
           <input type="number" id="t-val" step="0.001" value="0.05">
           <div class="presets" id="t-presets">
@@ -132,6 +147,14 @@
             <button type="button" data-v="0.05">&alpha; = .05</button>
             <button type="button" data-v="0.01">&alpha; = .01</button>
           </div>
+        </div>
+        <div class="field" id="t-loField" hidden>
+          <label class="lbl" for="t-lo">Lower t value (a)</label>
+          <input type="number" id="t-lo" step="0.01" value="-2.00">
+        </div>
+        <div class="field" id="t-hiField" hidden>
+          <label class="lbl" for="t-hi">Upper t value (b)</label>
+          <input type="number" id="t-hi" step="0.01" value="2.00">
         </div>
       </div>
       <div class="err" id="t-err"></div>
@@ -403,6 +426,8 @@ function qPdf(x, k, df){
    ========================================================================= */
 function fmt(v, dp){ dp = dp==null?4:dp; if(!isFinite(v)) return v>0?'∞':'−∞'; return v.toFixed(dp); }
 function fmtP(p){ if (p < 1e-4) return p.toExponential(2); return p.toFixed(4); }
+// Like toFixed, but with a true minus sign (−) for negative values.
+function fmtS(v, dp){ const s = Math.abs(v).toFixed(dp); return v < 0 && +s !== 0 ? '−'+s : s; }
 
 /* =========================================================================
    GENERIC CANVAS DRAWING
@@ -476,12 +501,23 @@ function drawCurve(canvas, opts){
 
   if (critLines.length){
     ctx.strokeStyle = css('--accent'); ctx.fillStyle = css('--accent');
-    ctx.setLineDash([5,4]); ctx.lineWidth = 1.5; ctx.textAlign='center'; ctx.font='bold 12px sans-serif';
+    ctx.setLineDash([5,4]); ctx.lineWidth = 1.5; ctx.textAlign='center'; ctx.font='bold 15px sans-serif';
+    const placed = [];
     critLines.forEach(({x,label}) => {
       if (!isFinite(x) || x<xMin || x>xMax) return;
       const py = sy(Math.min(pdf(x), yMax));
       ctx.beginPath(); ctx.moveTo(sx(x), sy(0)); ctx.lineTo(sx(x), py-6); ctx.stroke();
-      ctx.fillText(label, sx(x), py-12);
+      // Keep the label inside the canvas, and lift it above any label it would overlap
+      // (e.g. Between/Outside with two values close together).
+      const w = ctx.measureText(label).width;
+      const lx = Math.min(Math.max(sx(x), w/2+4), cssW-w/2-4);
+      let ly = py-12;
+      placed.forEach(o => { if (Math.abs(o.x-lx) < (o.w+w)/2+8 && Math.abs(o.y-ly) < 18) ly = o.y-20; });
+      // White halo so the label stays readable over the curve and shading.
+      ctx.save(); ctx.setLineDash([]); ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = css('--bg');
+      ctx.strokeText(label, lx, Math.max(ly, 16)); ctx.restore();
+      ctx.fillText(label, lx, Math.max(ly, 16));
+      placed.push({x:lx, y:ly, w});
     });
     ctx.setLineDash([]);
   }
@@ -497,6 +533,57 @@ function renderResult(prefix, r){
 }
 function showErr(prefix, msg){ document.getElementById(prefix+'-err').textContent = msg || ''; }
 
+// Turn a result's shade spec into shaded intervals + labelled vertical lines.
+// Types: two, left, right (single value z) and between, outside (range a..b).
+function shadeToDraw(shade, xMin, xMax, sym){
+  if (!shade) return {shades:[], critLines:[]};
+  const line = x => ({x, label: sym+' = '+fmtS(x,3)});
+  switch (shade.type){
+    case 'two': { const az = Math.abs(shade.z); return {shades:[[xMin,-az],[az,xMax]], critLines:[line(-az), line(az)]}; }
+    case 'right': return {shades:[[shade.z,xMax]], critLines:[line(shade.z)]};
+    case 'left': return {shades:[[xMin,shade.z]], critLines:[line(shade.z)]};
+    case 'between': return {shades:[[shade.a,shade.b]], critLines:[line(shade.a), line(shade.b)]};
+    case 'outside': return {shades:[[xMin,shade.a],[shade.b,xMax]], critLines:[line(shade.a), line(shade.b)]};
+  }
+}
+// Largest |value| in a shade spec, used to widen the plot so every line stays visible.
+function shadeExtent(shade){
+  if (!shade) return 0;
+  return shade.z != null ? Math.abs(shade.z) : Math.max(Math.abs(shade.a), Math.abs(shade.b));
+}
+
+// Between / Outside probability for a symmetric distribution with CDF `cdf`.
+function rangeResult(prefix, sym, cdf, a, b, apaPrefix){
+  const between = document.querySelector('input[name='+prefix+'-tail]:checked').value === 'between';
+  const A = fmtS(a,3), B = fmtS(b,3);
+  const C = x => sym === 'z' ? 'Φ('+x+')' : 'P(t < '+x+')';
+  const pa = cdf(a), pb = cdf(b), pIn = Math.max(0, pb-pa), pOut = Math.max(0, pa + (1-pb));
+  const tails = 'Area below a: '+C(A)+' = '+fmt(pa,4)+'  ·  Area above b: 1 − '+C(B)+' = '+fmt(1-pb,4);
+  const S = sym.toUpperCase();
+  if (between) return {big:'P('+A+' < '+S+' < '+B+') = '+fmtP(pIn),
+    lines:[tails, 'Probability outside this range: '+fmtP(pOut)],
+    apa:apaPrefix+'a = '+A+', b = '+B+', between  →  P = '+fmtP(pIn), shade:{type:'between',a,b},
+    explain:'P = '+C('b')+' − '+C('a')+' = '+fmt(pb,4)+' − '+fmt(pa,4)+' = '+fmtP(pIn)+'.'};
+  return {big:'P('+S+' < '+A+' or '+S+' > '+B+') = '+fmtP(pOut),
+    lines:[tails, 'Probability between a and b: '+fmtP(pIn)],
+    apa:apaPrefix+'a = '+A+', b = '+B+', outside  →  P = '+fmtP(pOut), shade:{type:'outside',a,b},
+    explain:'P = '+C('a')+' + [1 − '+C('b')+'] = '+fmt(pa,4)+' + '+fmt(1-pb,4)+' = '+fmtP(pOut)+'. Equivalently, 1 − P(between) = 1 − '+fmtP(pIn)+'.'};
+}
+function readRange(prefix, sym){
+  const a = parseFloat(document.getElementById(prefix+'-lo').value), b = parseFloat(document.getElementById(prefix+'-hi').value);
+  if (Number.isNaN(a) || Number.isNaN(b)){ showErr(prefix, 'Enter both '+sym+' values.'); return null; }
+  if (a >= b){ showErr(prefix, 'The lower value (a) must be less than the upper value (b).'); return null; }
+  return {a, b};
+}
+// Show either the single-value controls or the two range inputs.
+function syncRangeUI(prefix, isRange){
+  document.getElementById(prefix+'-modeBox').hidden = isRange;
+  document.getElementById(prefix+'-rangeNote').hidden = !isRange;
+  document.getElementById(prefix+'-valField').hidden = isRange;
+  document.getElementById(prefix+'-loField').hidden = !isRange;
+  document.getElementById(prefix+'-hiField').hidden = !isRange;
+}
+
 /* =========================================================================
    PAGE Z
    ========================================================================= */
@@ -504,8 +591,11 @@ function showErr(prefix, msg){ document.getElementById(prefix+'-err').textConten
   const valInput = document.getElementById('z-val');
   const zMode = () => document.querySelector('input[name=z-mode]:checked').value;
   const zTail = () => document.querySelector('input[name=z-tail]:checked').value;
+  const isRange = () => zTail()==='between' || zTail()==='outside';
 
   function syncLabel(){
+    syncRangeUI('z', isRange());
+    if (isRange()) return;
     if (zMode()==='zcrit'){
       document.getElementById('z-inLabel').textContent = 'Alpha (α), between 0 and 1';
       document.getElementById('z-presets').style.display = 'flex';
@@ -521,6 +611,10 @@ function showErr(prefix, msg){ document.getElementById(prefix+'-err').textConten
 
   function compute(){
     showErr('z','');
+    if (isRange()){
+      const r = readRange('z', 'Z');
+      return r && rangeResult('z', 'z', normCdf, r.a, r.b, '');
+    }
     const mode = zMode(), tail = zTail(), v = parseFloat(valInput.value);
     if (Number.isNaN(v)){ showErr('z','Enter a number.'); return null; }
     if (mode==='zcrit'){
@@ -561,27 +655,18 @@ function showErr(prefix, msg){ document.getElementById(prefix+'-err').textConten
       explain:'p = P(Z ≤ '+fmt(z,3)+') = Φ('+fmt(z,3)+').'};
   }
 
-  function shadeToDraw(shade, xMin, xMax, sym){
-    if (!shade) return {shades:[], critLines:[]};
-    if (shade.type==='two'){
-      const az = Math.abs(shade.z);
-      return {shades:[[xMin,-az],[az,xMax]], critLines:[{x:-az,label:sym+' = −'+az.toFixed(3)},{x:az,label:sym+' = '+az.toFixed(3)}]};
-    }
-    if (shade.type==='right') return {shades:[[shade.z,xMax]], critLines:[{x:shade.z,label:sym+' = '+shade.z.toFixed(3)}]};
-    return {shades:[[xMin,shade.z]], critLines:[{x:shade.z,label:sym+' = '+shade.z.toFixed(3)}]};
-  }
-
   window.renderZ = function(){
     const r = compute();
     renderResult('z', r);
     const canvas = document.getElementById('z-plot');
-    const d = shadeToDraw(r && r.shade, -4, 4, 'z');
-    drawCurve(canvas, {xMin:-4, xMax:4, pdf: normPdf, shades:d.shades, critLines:d.critLines});
+    const b = Math.max(4, shadeExtent(r && r.shade)*1.2);
+    const d = shadeToDraw(r && r.shade, -b, b, 'z');
+    drawCurve(canvas, {xMin:-b, xMax:b, pdf: normPdf, shades:d.shades, critLines:d.critLines});
   };
 
   document.querySelectorAll('input[name=z-mode]').forEach(x=>x.addEventListener('change',()=>{syncLabel();renderZ();}));
-  document.querySelectorAll('input[name=z-tail]').forEach(x=>x.addEventListener('change',renderZ));
-  valInput.addEventListener('input', renderZ);
+  document.querySelectorAll('input[name=z-tail]').forEach(x=>x.addEventListener('change',()=>{syncLabel();renderZ();}));
+  [valInput, document.getElementById('z-lo'), document.getElementById('z-hi')].forEach(el=>el.addEventListener('input', renderZ));
   document.getElementById('z-presets').addEventListener('click', e=>{
     if (e.target.tagName==='BUTTON'){ valInput.value = e.target.dataset.v; renderZ(); }
   });
@@ -596,8 +681,11 @@ function showErr(prefix, msg){ document.getElementById(prefix+'-err').textConten
   const valInput = document.getElementById('t-val');
   const tMode = () => document.querySelector('input[name=t-mode]:checked').value;
   const tTail = () => document.querySelector('input[name=t-tail]:checked').value;
+  const isRange = () => tTail()==='between' || tTail()==='outside';
 
   function syncLabel(){
+    syncRangeUI('t', isRange());
+    if (isRange()) return;
     if (tMode()==='crit'){
       document.getElementById('t-inLabel').textContent = 'Alpha (α), between 0 and 1';
       document.getElementById('t-presets').style.display = 'flex';
@@ -615,6 +703,10 @@ function showErr(prefix, msg){ document.getElementById(prefix+'-err').textConten
     showErr('t','');
     const df = parseFloat(dfInput.value);
     if (!(df>0)){ showErr('t','Degrees of freedom must be a positive number.'); return null; }
+    if (isRange()){
+      const r = readRange('t', 't');
+      return r && rangeResult('t', 't', x => tCdf(x, df), r.a, r.b, 'df = '+df+', ');
+    }
     const mode = tMode(), tail = tTail(), v = parseFloat(valInput.value);
     if (Number.isNaN(v)){ showErr('t','Enter a number.'); return null; }
     if (mode==='crit'){
@@ -661,20 +753,14 @@ function showErr(prefix, msg){ document.getElementById(prefix+'-err').textConten
     const canvas = document.getElementById('t-plot');
     if (!r){ drawCurve(canvas, {xMin:-4,xMax:4,pdf:x=>tPdf(x,20)}); return; }
     const df = parseFloat(dfInput.value);
-    const key = r.shade.type==='two' ? Math.abs(r.shade.z) : Math.abs(r.shade.z);
-    const b = Math.max(4.5, key*1.35);
-    const shade = r.shade;
-    let shades, critLines;
-    if (shade.type==='two'){ const az=Math.abs(shade.z); shades=[[-b,-az],[az,b]]; critLines=[{x:-az,label:'t = −'+az.toFixed(3)},{x:az,label:'t = '+az.toFixed(3)}]; }
-    else if (shade.type==='right'){ shades=[[shade.z,b]]; critLines=[{x:shade.z,label:'t = '+shade.z.toFixed(3)}]; }
-    else { shades=[[-b,shade.z]]; critLines=[{x:shade.z,label:'t = '+shade.z.toFixed(3)}]; }
-    drawCurve(canvas, {xMin:-b, xMax:b, pdf:x=>tPdf(x,df), shades, critLines});
+    const b = Math.max(4.5, shadeExtent(r.shade)*1.35);
+    const d = shadeToDraw(r.shade, -b, b, 't');
+    drawCurve(canvas, {xMin:-b, xMax:b, pdf:x=>tPdf(x,df), shades:d.shades, critLines:d.critLines});
   };
 
   document.querySelectorAll('input[name=t-mode]').forEach(x=>x.addEventListener('change',()=>{syncLabel();renderT();}));
-  document.querySelectorAll('input[name=t-tail]').forEach(x=>x.addEventListener('change',renderT));
-  dfInput.addEventListener('input', renderT);
-  valInput.addEventListener('input', renderT);
+  document.querySelectorAll('input[name=t-tail]').forEach(x=>x.addEventListener('change',()=>{syncLabel();renderT();}));
+  [dfInput, valInput, document.getElementById('t-lo'), document.getElementById('t-hi')].forEach(el=>el.addEventListener('input', renderT));
   document.getElementById('t-presets').addEventListener('click', e=>{
     if (e.target.tagName==='BUTTON'){ valInput.value = e.target.dataset.v; renderT(); }
   });
