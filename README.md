@@ -2,7 +2,7 @@
 
 Five interactive calculators for intro/intermediate statistics, built as one page with a tab-style navigation bar:
 
-- **Z (Normal)** — Z-Crit Lookup (enter alpha) or P-value Lookup (enter a Z-statistic); two-tailed, left, or right. **Between** / **Outside** find the probability that Z falls inside or outside a range [a, b].
+- **Z (Normal)** — P-value Lookup (enter a Z-statistic, the default) or Z-Crit Lookup (enter alpha); two-tailed, left, or right. **Between** / **Outside** find the probability that Z falls inside or outside a range [a, b].
 - **t** — Critical value (enter df and alpha) or p-value (enter df and a t-statistic); two-tailed, left, or right. **Between** / **Outside** find the probability that t falls inside or outside a range [a, b].
 - **&chi;&sup2; (Chi-Square)** — enter df and alpha, always right-tailed.
 - **F (ANOVA)** — enter numerator df, denominator df, and alpha, always right-tailed.
