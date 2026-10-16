@@ -557,17 +557,22 @@ function rangeResult(prefix, sym, cdf, a, b, apaPrefix){
   const between = document.querySelector('input[name='+prefix+'-tail]:checked').value === 'between';
   const A = fmtS(a,3), B = fmtS(b,3);
   const C = x => sym === 'z' ? 'Φ('+x+')' : 'P(t < '+x+')';
-  const pa = cdf(a), pb = cdf(b), pIn = Math.max(0, pb-pa), pOut = Math.max(0, pa + (1-pb));
-  const tails = 'Area below a: '+C(A)+' = '+fmt(pa,4)+'  ·  Area above b: 1 − '+C(B)+' = '+fmt(1-pb,4);
+  // Round each cumulative area to 4 places *before* combining them, the way students
+  // work from a 4-place table, so the worked arithmetic shown always adds up exactly.
+  const r4 = v => Math.round(v*1e4)/1e4;
+  const ROUND_NOTE = 'Each area is rounded to 4 decimal places first, as when working from a table.';
+  const pa = r4(cdf(a)), pb = r4(cdf(b)), pAbove = r4(1-pb);
+  const pIn = r4(Math.max(0, pb-pa)), pOut = r4(pa + pAbove);
+  const tails = 'Area below a: '+C(A)+' = '+fmt(pa,4)+'  ·  Area above b: 1 − '+C(B)+' = '+fmt(pAbove,4);
   const S = sym.toUpperCase();
-  if (between) return {big:'P('+A+' < '+S+' < '+B+') = '+fmtP(pIn),
-    lines:[tails, 'Probability outside this range: '+fmtP(pOut)],
-    apa:apaPrefix+'a = '+A+', b = '+B+', between  →  P = '+fmtP(pIn), shade:{type:'between',a,b},
-    explain:'P = '+C('b')+' − '+C('a')+' = '+fmt(pb,4)+' − '+fmt(pa,4)+' = '+fmtP(pIn)+'.'};
-  return {big:'P('+S+' < '+A+' or '+S+' > '+B+') = '+fmtP(pOut),
-    lines:[tails, 'Probability between a and b: '+fmtP(pIn)],
-    apa:apaPrefix+'a = '+A+', b = '+B+', outside  →  P = '+fmtP(pOut), shade:{type:'outside',a,b},
-    explain:'P = '+C('a')+' + [1 − '+C('b')+'] = '+fmt(pa,4)+' + '+fmt(1-pb,4)+' = '+fmtP(pOut)+'. Equivalently, 1 − P(between) = 1 − '+fmtP(pIn)+'.'};
+  if (between) return {big:'P('+A+' < '+S+' < '+B+') = '+fmt(pIn,4),
+    lines:[tails, 'Probability outside this range: '+fmt(pOut,4)],
+    apa:apaPrefix+'a = '+A+', b = '+B+', between  →  P = '+fmt(pIn,4), shade:{type:'between',a,b},
+    explain:'P = '+C('b')+' − '+C('a')+' = '+fmt(pb,4)+' − '+fmt(pa,4)+' = '+fmt(pIn,4)+'. '+ROUND_NOTE};
+  return {big:'P('+S+' < '+A+' or '+S+' > '+B+') = '+fmt(pOut,4),
+    lines:[tails, 'Probability between a and b: '+fmt(pIn,4)],
+    apa:apaPrefix+'a = '+A+', b = '+B+', outside  →  P = '+fmt(pOut,4), shade:{type:'outside',a,b},
+    explain:'P = '+C('a')+' + [1 − '+C('b')+'] = '+fmt(pa,4)+' + '+fmt(pAbove,4)+' = '+fmt(pOut,4)+'. '+ROUND_NOTE};
 }
 function readRange(prefix, sym){
   const a = parseFloat(document.getElementById(prefix+'-lo').value), b = parseFloat(document.getElementById(prefix+'-hi').value);
